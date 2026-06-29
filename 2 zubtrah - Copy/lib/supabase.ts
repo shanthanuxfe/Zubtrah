@@ -1,5 +1,6 @@
-import { getLocalStorage, getNamespacedStorageKey } from './storage';
+import { ensureStorageIsolation, getLocalStorage, getNamespacedStorageKey } from './storage';
 
+ensureStorageIsolation();
 const STORAGE_KEY = getNamespacedStorageKey('zubtrah_subscriptions_v1');
 
 export type BillingCycle = 'monthly' | 'yearly';

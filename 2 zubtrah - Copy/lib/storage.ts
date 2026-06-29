@@ -5,6 +5,8 @@ type StorageLike = {
 };
 
 const fallbackStorage = new Map<string, string>();
+const DEVICE_ID_STORAGE_KEY = 'zubtrah_device_id_v1';
+const LEGACY_STORAGE_KEYS = ['zubtrah_subscriptions_v1', 'app_settings_v1'];
 
 function getBrowserStorage(): StorageLike | null {
   if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
@@ -16,20 +18,40 @@ function getBrowserStorage(): StorageLike | null {
   return null;
 }
 
-function createNamespaceKey(baseKey: string): string {
-  const browserFingerprint = [
-    typeof window !== 'undefined' ? window.location.hostname : 'unknown-host',
-    typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown-user-agent',
-    typeof window !== 'undefined' ? `${window.screen.width}x${window.screen.height}` : 'unknown-screen',
-    typeof navigator !== 'undefined' ? navigator.language : 'unknown-language',
-  ].join('|');
+function getOrCreateDeviceId(): string {
+  const storage = getLocalStorage();
+  const existing = storage.getItem(DEVICE_ID_STORAGE_KEY);
+  if (existing) return existing;
 
-  const hash = Array.from(browserFingerprint).reduce((acc, char) => {
-    acc = (acc << 5) - acc + char.charCodeAt(0);
-    return acc & acc;
-  }, 0);
+  const nextId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-  return `${baseKey}:${Math.abs(hash).toString(16)}`;
+  storage.setItem(DEVICE_ID_STORAGE_KEY, nextId);
+  return nextId;
+}
+
+function buildNamespacedKey(baseKey: string, deviceId: string): string {
+  return `${baseKey}:${deviceId}`;
+}
+
+export function ensureStorageIsolation(): void {
+  const storage = getLocalStorage();
+  const deviceId = getOrCreateDeviceId();
+
+  for (const legacyKey of LEGACY_STORAGE_KEYS) {
+    const legacyValue = storage.getItem(legacyKey);
+    if (!legacyValue) {
+      storage.removeItem(legacyKey);
+      continue;
+    }
+
+    const namespacedKey = buildNamespacedKey(legacyKey, deviceId);
+    if (!storage.getItem(namespacedKey)) {
+      storage.setItem(namespacedKey, legacyValue);
+    }
+    storage.removeItem(legacyKey);
+  }
 }
 
 export function getLocalStorage(): StorageLike {
@@ -50,5 +72,6 @@ export function getLocalStorage(): StorageLike {
 }
 
 export function getNamespacedStorageKey(baseKey: string): string {
-  return createNamespaceKey(baseKey);
+  const deviceId = getOrCreateDeviceId();
+  return buildNamespacedKey(baseKey, deviceId);
 }

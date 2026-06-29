@@ -10,8 +10,9 @@ import {
 import { lightColors, darkColors, type AppColors } from '@/lib/theme';
 import { type Subscription, getSubscriptions } from '@/lib/supabase';
 import { syncAllNotifications } from '@/lib/notifications';
-import { getLocalStorage, getNamespacedStorageKey } from '@/lib/storage';
+import { ensureStorageIsolation, getLocalStorage, getNamespacedStorageKey } from '@/lib/storage';
 
+ensureStorageIsolation();
 const STORAGE_KEY = getNamespacedStorageKey('app_settings_v1');
 
 export type AppSettings = {
