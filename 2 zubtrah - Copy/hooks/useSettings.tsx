@@ -10,18 +10,9 @@ import {
 import { lightColors, darkColors, type AppColors } from '@/lib/theme';
 import { type Subscription, getSubscriptions } from '@/lib/supabase';
 import { syncAllNotifications } from '@/lib/notifications';
+import { getLocalStorage, getNamespacedStorageKey } from '@/lib/storage';
 
-const STORAGE_KEY = 'app_settings_v1';
-
-function getStorage(): Storage | null {
-  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-    return window.localStorage;
-  }
-  if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
-    return globalThis.localStorage as Storage;
-  }
-  return null;
-}
+const STORAGE_KEY = getNamespacedStorageKey('app_settings_v1');
 
 export type AppSettings = {
   notifications: boolean;
@@ -61,8 +52,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const storage = getStorage();
-        const raw = storage?.getItem(STORAGE_KEY);
+        const storage = getLocalStorage();
+        const raw = storage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<AppSettings>;
           // Merge with defaults so new fields don't break old saves
@@ -81,7 +72,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const next = { ...prev, ...patch };
       // Fire-and-forget persistence — never block UI
       try {
-        getStorage()?.setItem(STORAGE_KEY, JSON.stringify(next));
+        getLocalStorage().setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {
         // Ignore — fall back to in-memory state
       }

@@ -1,30 +1,6 @@
-const STORAGE_KEY = 'zubtrah_subscriptions_v1';
+import { getLocalStorage, getNamespacedStorageKey } from './storage';
 
-type StorageLike = {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-};
-
-const fallbackStorage = new Map<string, string>();
-
-function getStorage(): StorageLike {
-  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-    return window.localStorage as StorageLike;
-  }
-  if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis && globalThis.localStorage) {
-    return globalThis.localStorage as StorageLike;
-  }
-  return {
-    getItem: (key: string) => fallbackStorage.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      fallbackStorage.set(key, value);
-    },
-    removeItem: (key: string) => {
-      fallbackStorage.delete(key);
-    },
-  };
-}
+const STORAGE_KEY = getNamespacedStorageKey('zubtrah_subscriptions_v1');
 
 export type BillingCycle = 'monthly' | 'yearly';
 
@@ -187,8 +163,8 @@ function createId(): string {
 }
 
 async function readSubscriptions(): Promise<Subscription[]> {
-  const storage = getStorage();
-  const raw = storage?.getItem(STORAGE_KEY);
+  const storage = getLocalStorage();
+  const raw = storage.getItem(STORAGE_KEY);
 
   if (!raw) return [];
 
@@ -202,7 +178,7 @@ async function readSubscriptions(): Promise<Subscription[]> {
 
 async function writeSubscriptions(subscriptions: Subscription[]): Promise<void> {
   const payload = JSON.stringify(subscriptions);
-  const storage = getStorage();
+  const storage = getLocalStorage();
   storage.setItem(STORAGE_KEY, payload);
 }
 
